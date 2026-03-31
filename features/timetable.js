@@ -250,6 +250,55 @@ async function handleUpdateSingleClass(client, message, phone) {
     });
 }
 
+// Handle deleting a single class entry
+async function handleDeleteSingleClass(client, message, phone) {
+    const msg = message.body.toLowerCase().trim();
+    const cleanMsg = msg.replace(/^(?:delete|remove|cancel)\s+(?:timetable\s+|schedule\s+|class\s+)?/i, '').trim();
+    
+    // Find day at the start
+    const dayMatch = cleanMsg.match(/^(mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s+/i);
+    
+    if (!dayMatch) {
+         await message.reply('❌ Could not understand the class to delete. Format: "delete wed math"');
+         return;
+    }
+    const day = normalizeDay(dayMatch[1]);
+    const subject = cleanMsg.substring(dayMatch[0].length).trim();
+    
+    if (!subject) {
+        await message.reply('❌ Please specify the subject to delete. Format: "delete wed math"');
+        return;
+    }
+
+    getTimetable(phone, day, (err, currentTimetable) => {
+        if (err) return message.reply('Sorry, error getting timetable.');
+        
+        const originalCount = (currentTimetable || []).length;
+        const newTimetable = (currentTimetable || []).filter(cls => 
+            !cls.subject.toLowerCase().includes(subject.toLowerCase())
+        );
+        
+        if (originalCount === newTimetable.length) {
+            return message.reply(`ℹ️ Couldn't find a class matching "${subject}" on ${day}.`);
+        }
+        
+        clearTimetable(phone, day, (err) => {
+            if (newTimetable.length === 0) {
+                 return message.reply(`✅ Deleted "${subject}". ${day} is now completely empty!`);
+            }
+            let savedCount = 0;
+            newTimetable.forEach(cls => {
+                saveTimetable(phone, day, cls.subject, cls.start_time, cls.end_time, cls.venue, (err) => {
+                    savedCount++;
+                    if (savedCount === newTimetable.length) {
+                        message.reply(`✅ Deleted "${subject}". Updated ${day}:\n\n` + newTimetable.map(c => `⏰ ${c.start_time}-${c.end_time}: *${c.subject}*${c.venue ? ` 📍 ${c.venue}` : ''}`).join('\n'));
+                    }
+                });
+            });
+        });
+    });
+}
+
 // Send class reminders
 async function sendClassReminders(client, activeUsers) {
     const now = new Date();
@@ -305,5 +354,6 @@ module.exports = {
     handleTimetableUpdate,
     handleViewTimetable,
     handleUpdateSingleClass,
+    handleDeleteSingleClass,
     sendClassReminders
 };

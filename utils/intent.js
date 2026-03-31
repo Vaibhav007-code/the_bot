@@ -30,12 +30,26 @@ function detectIntent(message) {
     if (msg === '15') return 'view_attendance';
     if (msg === '16') return 'add_note';
     
-    // ---- VIEW intents must come BEFORE add intents ----
+    // ---- Modification intents must come BEFORE view intents when terms overlap ----
+    
+    // Timetable related (Update/Set/Delete)
+    if (/(?:delete|remove|cancel)(?:\s+timetable|\s+schedule|\s+class)?\s+/i.test(msg) && /(mon|tue|wed|thu|fri|sat|sun)/i.test(msg)) {
+        return 'delete_single_class';
+    }
+    if (/(?:update|add|set)(?:\s+timetable|\s+schedule|\s+class)?\s+/i.test(msg) && /(mon|tue|wed|thu|fri|sat|sun)/i.test(msg) && /\d/.test(msg) && /to|-|till/i.test(msg)) {
+        return 'update_single_class';
+    }
+    if (msg.includes('set timetable') || msg.includes('update timetable') || msg === 'timetable') {
+        return 'update_timetable';
+    }
     
     // View timetable (specific day or all)
-    if (msg.includes('view timetable') || msg.includes('show timetable') || msg.includes('my timetable') || 
-        (msg.includes('timetable') && (msg.includes('for') || /(mon|tue|wed|thu|fri|sat|sun)/i.test(msg)))) {
-        return 'view_timetable';
+    // Avoid triggering view if it's an update/add command
+    if (!/(?:update|add|set|delete|remove|cancel)/i.test(msg)) {
+        if (msg.includes('view timetable') || msg.includes('show timetable') || msg.includes('my timetable') || 
+            (msg.includes('timetable') && (msg.includes('for') || /(mon|tue|wed|thu|fri|sat|sun)/i.test(msg)))) {
+            return 'view_timetable';
+        }
     }
     
     // Live class status
@@ -93,14 +107,6 @@ function detectIntent(message) {
     }
     if (msg.includes('set morning time') || msg.includes('change morning time')) {
         return 'set_morning_time';
-    }
-    
-    // Timetable related (Update/Set)
-    if (/(?:update|add|set)(?:\s+timetable|\s+schedule|\s+class)?\s+/i.test(msg) && /(mon|tue|wed|thu|fri|sat|sun)/i.test(msg) && /\d/.test(msg) && /to|-|till/i.test(msg)) {
-        return 'update_single_class';
-    }
-    if (msg.includes('set timetable') || msg.includes('update timetable') || msg === 'timetable') {
-        return 'update_timetable';
     }
     
     // Bunk related

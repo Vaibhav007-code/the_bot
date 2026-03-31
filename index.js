@@ -9,7 +9,7 @@ const { initDB, createUser, getUser, isOnboarded, getUserSettings, normalizePhon
 const { detectIntent } = require('./utils/intent');
 
 // Import features
-const { handleTimetableUpdate, handleViewTimetable, handleUpdateSingleClass, sendClassReminders } = require('./features/timetable');
+const { handleTimetableUpdate, handleViewTimetable, handleUpdateSingleClass, handleDeleteSingleClass, sendClassReminders } = require('./features/timetable');
 const { handleBunkClass } = require('./features/bunk');
 const { handleSplitExpense } = require('./features/splitter');
 const { handleSummarize } = require('./features/summarizer');
@@ -438,6 +438,10 @@ async function handleIntent(message, phone, intent) {
                 
             case 'update_single_class':
                 await handleUpdateSingleClass(client, message, phone);
+                break;
+                
+            case 'delete_single_class':
+                await handleDeleteSingleClass(client, message, phone);
                 break;
                 
             case 'bunk_class':
