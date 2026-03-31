@@ -458,6 +458,13 @@ async function handleIntent(message, phone, intent) {
                 
             case 'class_status':
                 getClassStatus(phone, (err, statusData) => {
+                    const formatMins = (m) => {
+                        if (m < 60) return `${m} min`;
+                        const h = Math.floor(m / 60);
+                        const rem = m % 60;
+                        return rem > 0 ? `${h} hr ${rem} min` : `${h} hr`;
+                    };
+                    
                     if (err || !statusData) {
                         message.reply('Sorry, I had trouble checking your class status.');
                     } else if (statusData.status === 'no_classes') {
@@ -469,7 +476,7 @@ async function handleIntent(message, phone, intent) {
                         
                         message.reply(
                             `📍 *LIVE: ${statusData.currentClass.subject}*${curV}\n\n` +
-                            `⏱️ ${statusData.remaining} minutes remaining\n` +
+                            `⏱️ ${formatMins(statusData.remaining)} remaining\n` +
                             nextStr
                         );
                     } else if (statusData.status === 'break') {
@@ -477,7 +484,7 @@ async function handleIntent(message, phone, intent) {
                         message.reply(
                             `☕ *BREAK*\n\n` +
                             `⏭️ Next: *${statusData.nextClass.subject}*${nextV}\n` +
-                            `⏱️ Starts in ${statusData.minsUntil} minutes`
+                            `⏱️ Starts in ${formatMins(statusData.minsUntil)}`
                         );
                     } else {
                         message.reply('🎉 You are done with classes for today!');
