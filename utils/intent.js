@@ -168,33 +168,82 @@ function extractTimetableInfo(message) {
     
     // Check if it's JSON format first
     try {
-        // Find JSON object in the message (may have prefix text like "timetable" or "1")
-        const jsonMatch = msg.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            const jsonStr = jsonMatch[0];
-            const jsonData = JSON.parse(jsonStr);
-            
-            for (const [day, classes] of Object.entries(jsonData)) {
-                const normalizedDay = normalizeDay(day);
-                
-                if (Array.isArray(classes)) {
-                    for (const classInfo of classes) {
-                        if (classInfo.subject && classInfo.start && classInfo.end) {
-                            timetableData.push({
-                                day: normalizedDay,
-                                subject: classInfo.subject,
-                                start_time: normalizeTime(classInfo.start),
-                                end_time: normalizeTime(classInfo.end),
-                                venue: classInfo.venue || classInfo.room || ''
-                            });
+        // Try stripping markdown fences first
+        let jsonStr = msg.replace(/.*?```(?:json)?\s*/i, '').replace(/\s*```.*/i, '');
+        let jsonData = null;
+        
+        // Find arrays or objects
+        const arrMatch = jsonStr.match(/\[[\s\S]*\]/);
+        const objMatch = jsonStr.match(/\{[\s\S]*\}/);
+        
+        if (arrMatch) {
+            try { jsonData = JSON.parse(arrMatch[0]); } catch(e){}
+        }
+        if (!jsonData && objMatch) {
+            try { jsonData = JSON.parse(objMatch[0]); } catch(e){}
+        }
+        
+        // Fallback to original raw message
+        if (!jsonData) {
+            const rawObj = msg.match(/\{[\s\S]*\}/);
+            if (rawObj) {
+                try { jsonData = JSON.parse(rawObj[0]); } catch(e){}
+            }
+        }
+        
+        if (jsonData) {
+            if (Array.isArray(jsonData)) {
+                for (const classInfo of jsonData) {
+                    const subject = classInfo.subject || classInfo.name || classInfo.course;
+                    const start = classInfo.start || classInfo.startTime || classInfo.start_time;
+                    const end = classInfo.end || classInfo.endTime || classInfo.end_time;
+                    const venue = classInfo.venue || classInfo.room || classInfo.location || classInfo.loc || '';
+                    
+                    if (classInfo.day && subject && start && end) {
+                        timetableData.push({
+                            day: normalizeDay(classInfo.day),
+                            subject: subject,
+                            start_time: normalizeTime(start),
+                            end_time: normalizeTime(end),
+                            venue: String(venue)
+                        });
+                    }
+                }
+            } else {
+                for (const [day, classes] of Object.entries(jsonData)) {
+                    if (!/mon|tue|wed|thu|fri|sat|sun/i.test(day)) continue;
+                    
+                    const normalizedDay = normalizeDay(day);
+                    
+                    if (Array.isArray(classes)) {
+                        for (const classInfo of classes) {
+                            const subject = classInfo.subject || classInfo.name || classInfo.course;
+                            const start = classInfo.start || classInfo.startTime || classInfo.start_time;
+                            const end = classInfo.end || classInfo.endTime || classInfo.end_time;
+                            const venue = classInfo.venue || classInfo.room || classInfo.location || classInfo.loc || '';
+                            
+                            if (subject && start && end) {
+                                timetableData.push({
+                                    day: normalizedDay,
+                                    subject: subject,
+                                    start_time: normalizeTime(start),
+                                    end_time: normalizeTime(end),
+                                    venue: String(venue)
+                                });
+                            }
                         }
                     }
                 }
             }
-            if (timetableData.length > 0) return timetableData;
+            
+            const validEntries = timetableData.filter(d => d.subject && d.start_time && d.end_time);
+            if (validEntries.length > 0) return validEntries;
+            
+            // Clean out array if JSON matched but schema failed
+            timetableData.length = 0;
         }
     } catch (error) {
-        // Not JSON, continue with text parsing
+        // Not valid JSON, continue to raw text heuristic parsing
     }
     
     // Remove prefix keywords
