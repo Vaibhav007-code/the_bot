@@ -96,7 +96,7 @@ function detectIntent(message) {
     }
     
     // Timetable related (Update/Set)
-    if (msg.startsWith('update ') && /(mon|tue|wed|thu|fri|sat|sun)/i.test(msg) && /\d/.test(msg) && /to|-|till/i.test(msg)) {
+    if (/(?:update|add|set)(?:\s+timetable|\s+schedule|\s+class)?\s+/i.test(msg) && /(mon|tue|wed|thu|fri|sat|sun)/i.test(msg) && /\d/.test(msg) && /to|-|till/i.test(msg)) {
         return 'update_single_class';
     }
     if (msg.includes('set timetable') || msg.includes('update timetable') || msg === 'timetable') {
@@ -449,7 +449,8 @@ function extractExpenseInfo(message) {
 function extractSingleClassUpdate(message) {
     const msg = message.toLowerCase().trim();
     
-    const cleanMsg = msg.replace(/^update\s+/i, '');
+    // Strip "update ", "update timetable ", "add class " etc to find the day cleanly
+    const cleanMsg = msg.replace(/^(?:update|add|set)\s+(?:timetable\s+|schedule\s+|class\s+)?/i, '').trim();
     
     // Find day at the start
     const dayMatch = cleanMsg.match(/^(mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s+/i);
