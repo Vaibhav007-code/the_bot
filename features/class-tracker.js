@@ -47,10 +47,6 @@ async function trackClassLive(client, activeUsers) {
         }
         
         users.forEach(user => {
-            // Only track for active users
-            const state = activeUsers ? activeUsers.get(user.phone) : null;
-            if (!state || !state.started) return;
-            
             getTimetable(user.phone, currentDay, (err, timetable) => {
                 if (err || !timetable || timetable.length === 0) return;
                 

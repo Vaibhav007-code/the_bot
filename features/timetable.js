@@ -315,9 +315,6 @@ async function sendClassReminders(client, activeUsers) {
         }
         
         users.forEach(user => {
-            // Only send reminders to users who have sent "start"
-            if (activeUsers && !activeUsers.has(user.phone)) return;
-            
             getTimetable(user.phone, currentDay, (err, timetable) => {
                 if (err) {
                     console.error(`Error getting timetable for ${user.phone}:`, err);

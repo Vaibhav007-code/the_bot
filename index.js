@@ -752,8 +752,8 @@ async function handlePlanTomorrow(message, phone) {
 
 // Class reminders & Live Tracker - every minute
 cron.schedule('* * * * *', async () => {
-    await sendClassReminders(client, activeUsers);
-    await trackClassLive(client, activeUsers);
+    await sendClassReminders(client, null);
+    await trackClassLive(client, null);
 });
 
 // Night planning system - every minute
@@ -762,26 +762,14 @@ cron.schedule('* * * * *', async () => {
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     
     getAllUsers((err, users) => {
-        if (err) {
-            console.error('Error getting users for night planning:', err);
-            return;
-        }
+        if (err) return;
         
         for (const user of users) {
-            // Only send to active users
-            const state = activeUsers.get(user.phone);
-            if (!state || !state.started) continue;
-            
             getUserSettings(user.phone, (err, settings) => {
-                if (err) {
-                    console.error(`Error getting settings for ${user.phone}:`, err);
-                    return;
-                }
+                if (err) return;
                 
                 if (settings && settings.night_planning_time === currentTime) {
-                    // Check if we already sent a prompt today
                     const lastPrompt = nightPlanningState.get(user.phone);
-                    
                     if (!lastPrompt || new Date(lastPrompt).toDateString() !== now.toDateString()) {
                         sendNightPlanningPrompt(client, user.phone);
                         nightPlanningState.set(user.phone, Date.now());
@@ -798,30 +786,15 @@ cron.schedule('* * * * *', async () => {
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     
     getAllUsers((err, users) => {
-        if (err) {
-            console.error('Error getting users for morning brief:', err);
-            return;
-        }
+        if (err) return;
         
         for (const user of users) {
-            // Only send to active users
-            const state = activeUsers.get(user.phone);
-            if (!state || !state.started) continue;
-            
             getUserSettings(user.phone, (err, settings) => {
-                if (err) {
-                    console.error(`Error getting settings for ${user.phone}:`, err);
-                    return;
-                }
+                if (err) return;
                 
                 if (settings && settings.morning_brief_time === currentTime) {
                     getUser(user.phone, (err, userInfo) => {
-                        if (err) {
-                            console.error(`Error getting user info for ${user.phone}:`, err);
-                            return;
-                        }
-                        
-                        if (userInfo) {
+                        if (!err && userInfo) {
                             sendMorningBrief(client, user.phone, userInfo.name);
                         }
                     });
@@ -833,7 +806,10 @@ cron.schedule('* * * * *', async () => {
 
 // Weekly Summary - Sunday at 8 PM (20:00)
 cron.schedule('0 20 * * 0', async () => {
-    await sendWeeklySummaryToAll(client, activeUsers);
+    getAllUsers((err, users) => {
+        if (err) return;
+        users.forEach(user => sendWeeklySummaryToAll(client, user.phone));
+    });
 });
 
 // =============================================================================
