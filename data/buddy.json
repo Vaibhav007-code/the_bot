@@ -1,0 +1,326 @@
+{
+  "users": {
+    "160829496361027@lid": {
+      "name": "Vaibhav",
+      "onboarded": 1
+    },
+    "160829496361027": {
+      "name": "Vaibhav",
+      "onboarded": 1
+    }
+  },
+  "timetable": {
+    "160829496361027": [
+      {
+        "day": "TUE",
+        "subject": "PD & Soft Skills",
+        "start_time": "09:55",
+        "end_time": "10:50"
+      },
+      {
+        "day": "TUE",
+        "subject": "Web Technologies",
+        "start_time": "10:50",
+        "end_time": "12:30"
+      },
+      {
+        "day": "TUE",
+        "subject": "LAB Adv. DBMS",
+        "start_time": "12:40",
+        "end_time": "14:30"
+      },
+      {
+        "day": "TUE",
+        "subject": "Python Programming",
+        "start_time": "14:30",
+        "end_time": "16:20"
+      },
+      {
+        "day": "TUE",
+        "subject": "Comm. for Prof. Exc",
+        "start_time": "16:20",
+        "end_time": "17:15"
+      },
+      {
+        "day": "WED",
+        "subject": "LAB Adv. DBMS",
+        "start_time": "09:00",
+        "end_time": "10:50"
+      },
+      {
+        "day": "WED",
+        "subject": "PD & Soft Skills",
+        "start_time": "10:50",
+        "end_time": "11:45"
+      },
+      {
+        "day": "WED",
+        "subject": "Web Technologies",
+        "start_time": "11:45",
+        "end_time": "12:30"
+      },
+      {
+        "day": "WED",
+        "subject": "Python Programming",
+        "start_time": "12:40",
+        "end_time": "13:35"
+      },
+      {
+        "day": "WED",
+        "subject": "OOP with Java",
+        "start_time": "13:35",
+        "end_time": "14:30"
+      },
+      {
+        "day": "WED",
+        "subject": "Analytical Skills",
+        "start_time": "14:30",
+        "end_time": "15:25"
+      },
+      {
+        "day": "WED",
+        "subject": "Cyber Security",
+        "start_time": "15:25",
+        "end_time": "16:20"
+      },
+      {
+        "day": "WED",
+        "subject": "ML",
+        "start_time": "16:20",
+        "end_time": "17:15"
+      },
+      {
+        "day": "THU",
+        "subject": "Python Programming",
+        "start_time": "09:00",
+        "end_time": "10:50"
+      },
+      {
+        "day": "THU",
+        "subject": "LAB DSA",
+        "start_time": "10:50",
+        "end_time": "12:30"
+      },
+      {
+        "day": "THU",
+        "subject": "Web Technologies",
+        "start_time": "12:40",
+        "end_time": "13:35"
+      },
+      {
+        "day": "THU",
+        "subject": "Analytical Skills",
+        "start_time": "13:35",
+        "end_time": "14:30"
+      },
+      {
+        "day": "THU",
+        "subject": "OOP with Java",
+        "start_time": "15:25",
+        "end_time": "16:20"
+      },
+      {
+        "day": "THU",
+        "subject": "Adv DBMS",
+        "start_time": "16:20",
+        "end_time": "17:15"
+      },
+      {
+        "day": "FRI",
+        "subject": "LAB OOP with Java",
+        "start_time": "09:00",
+        "end_time": "10:50"
+      },
+      {
+        "day": "FRI",
+        "subject": "Python Programming",
+        "start_time": "10:50",
+        "end_time": "12:30"
+      },
+      {
+        "day": "FRI",
+        "subject": "OOP with Java",
+        "start_time": "12:40",
+        "end_time": "13:35"
+      },
+      {
+        "day": "FRI",
+        "subject": "PD & Soft Skills",
+        "start_time": "13:35",
+        "end_time": "14:30"
+      },
+      {
+        "day": "FRI",
+        "subject": "DSA",
+        "start_time": "14:30",
+        "end_time": "15:25"
+      },
+      {
+        "day": "FRI",
+        "subject": "ML",
+        "start_time": "15:25",
+        "end_time": "16:20"
+      },
+      {
+        "day": "FRI",
+        "subject": "Cyber Security",
+        "start_time": "16:20",
+        "end_time": "17:15"
+      },
+      {
+        "day": "SAT",
+        "subject": "LAB Web Technologies",
+        "start_time": "09:00",
+        "end_time": "10:50"
+      },
+      {
+        "day": "SAT",
+        "subject": "OOP with Java",
+        "start_time": "10:50",
+        "end_time": "12:30"
+      },
+      {
+        "day": "SAT",
+        "subject": "Adv DBMS",
+        "start_time": "12:40",
+        "end_time": "14:30"
+      },
+      {
+        "day": "SAT",
+        "subject": "LAB OOP with Java",
+        "start_time": "14:30",
+        "end_time": "16:20"
+      },
+      {
+        "day": "SAT",
+        "subject": "Analytical Skills",
+        "start_time": "16:20",
+        "end_time": "17:15"
+      },
+      {
+        "day": "MON",
+        "subject": "LAB Python Programming",
+        "start_time": "09:55",
+        "end_time": "11:45"
+      },
+      {
+        "day": "MON",
+        "subject": "PD & Soft Skills",
+        "start_time": "11:45",
+        "end_time": "12:30"
+      },
+      {
+        "day": "MON",
+        "subject": "LAB DSA",
+        "start_time": "13:35",
+        "end_time": "15:25"
+      },
+      {
+        "day": "MON",
+        "subject": "Dbms",
+        "start_time": "15:25",
+        "end_time": "16:20"
+      },
+      {
+        "day": "MON",
+        "subject": "DSA",
+        "start_time": "16:20",
+        "end_time": "17:15"
+      }
+    ]
+  },
+  "daily_tasks": {
+    "160829496361027@lid": [
+      {
+        "id": 1774981405489,
+        "task": "3",
+        "task_date": "2026-03-31",
+        "completed": 0
+      },
+      {
+        "id": 1774981475917,
+        "task": "get to class",
+        "task_date": "2026-04-01",
+        "completed": 0
+      },
+      {
+        "id": 1774981475958,
+        "task": "bring the files",
+        "task_date": "2026-04-01",
+        "completed": 0
+      },
+      {
+        "id": 1774981475980,
+        "task": "attend classes",
+        "task_date": "2026-04-01",
+        "completed": 0
+      }
+    ],
+    "160829496361027": [
+      {
+        "id": 1774982949649,
+        "task": "Complete the DSA file",
+        "task_date": "2026-03-31",
+        "completed": 0
+      },
+      {
+        "id": 1774983303593,
+        "task": "learn the frontend with project",
+        "task_date": "2026-04-01",
+        "completed": 0
+      },
+      {
+        "id": 1774983303619,
+        "task": "give the contest on codechef",
+        "task_date": "2026-04-01",
+        "completed": 0
+      },
+      {
+        "id": 1774983303640,
+        "task": "complete the files",
+        "task_date": "2026-04-01",
+        "completed": 0
+      }
+    ]
+  },
+  "user_settings": {
+    "160829496361027@lid": {
+      "night_planning_time": "22:00",
+      "morning_brief_time": "07:00"
+    },
+    "160829496361027": {
+      "night_planning_time": "22:00",
+      "morning_brief_time": "06:30"
+    }
+  },
+  "expenses": {
+    "160829496361027@lid": [
+      {
+        "id": 1774981389245,
+        "amount": 2,
+        "category": "General",
+        "description": "",
+        "date": "2026-03-31"
+      }
+    ],
+    "160829496361027": [
+      {
+        "id": 1774982762024,
+        "amount": 20,
+        "category": "Food",
+        "description": "coffee",
+        "date": "2026-03-31"
+      },
+      {
+        "id": 1774982786223,
+        "amount": 50,
+        "category": "Food",
+        "description": "food",
+        "date": "2026-03-31"
+      }
+    ]
+  },
+  "deadlines": {},
+  "resources": {},
+  "bunk_history": {}
+}

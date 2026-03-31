@@ -104,9 +104,10 @@ pids
 sessions/*
 !sessions/.gitkeep
 
-# Database (keep structure but ignore content)
-data/*
-!data/.gitkeep
+# SQLite database (local persistent - do not push)
+data/*.db
+data/*.db-shm
+data/*.db-wal
 
 # OS generated files
 .DS_Store

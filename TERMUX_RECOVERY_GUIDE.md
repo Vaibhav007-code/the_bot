@@ -27,8 +27,9 @@ If you ever accidentally delete the Termux app, factory reset your Android phone
    ```
 
 ### Step 3: Bypass ARM Architecture Errors
-Because Android ARM processors block standard Windows/Mac Chromium installations, you must install the code using these exact flags to suppress the errors:
+Because Android ARM processors block standard Windows/Mac Chromium installations, AND because the bot uses a native SQLite module (`better-sqlite3`) that must be compiled from source, you need to install the C++ build tools first:
 ```bash
+pkg install python make clang -y
 export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 npm install --ignore-scripts
 ```
