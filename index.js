@@ -55,7 +55,9 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--disable-gpu'
+            '--single-process',
+            '--disable-gpu',
+            '--disable-software-rasterizer'
         ]
     }
 });
