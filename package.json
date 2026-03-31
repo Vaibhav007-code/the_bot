@@ -8,7 +8,6 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
-    "better-sqlite3": "^12.8.0",
     "node-cron": "^3.0.2",
     "puppeteer": "^21.3.8",
     "qrcode-terminal": "^0.12.0",

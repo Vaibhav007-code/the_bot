@@ -1,91 +1,8 @@
-const Database = require('better-sqlite3');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
-// Ensure data directory exists
 const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-}
-
-const DB_PATH = path.join(dataDir, 'buddy.db');
-let db;
-
-// =============================================================================
-// INIT
-// =============================================================================
-function initDB() {
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
-
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS users (
-            phone TEXT PRIMARY KEY,
-            name TEXT,
-            onboarded INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS timetable (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone TEXT NOT NULL,
-            day TEXT NOT NULL,
-            subject TEXT NOT NULL,
-            start_time TEXT NOT NULL,
-            end_time TEXT NOT NULL,
-            venue TEXT DEFAULT ''
-        );
-
-        CREATE TABLE IF NOT EXISTS daily_tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone TEXT NOT NULL,
-            task TEXT NOT NULL,
-            task_date TEXT NOT NULL,
-            completed INTEGER DEFAULT 0
-        );
-
-        CREATE TABLE IF NOT EXISTS user_settings (
-            phone TEXT PRIMARY KEY,
-            night_planning_time TEXT DEFAULT '22:00',
-            morning_brief_time TEXT DEFAULT '07:00'
-        );
-
-        CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone TEXT NOT NULL,
-            amount REAL NOT NULL,
-            category TEXT DEFAULT 'General',
-            description TEXT,
-            date TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS deadlines (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone TEXT NOT NULL,
-            task TEXT NOT NULL,
-            deadline_date TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone TEXT NOT NULL,
-            subject TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS bunk_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone TEXT NOT NULL,
-            subject TEXT NOT NULL,
-            date TEXT NOT NULL
-        );
-    `);
-
-    console.log('✅ SQLite database initialized at', DB_PATH);
-}
+const DB_PATH = path.join(dataDir, 'buddy.json');
 
 // =============================================================================
 // HELPERS
@@ -101,145 +18,183 @@ function getChatId(phone) {
 }
 
 // =============================================================================
+// FILE I/O
+// =============================================================================
+function readData() {
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    if (!fs.existsSync(DB_PATH)) {
+        const empty = { users: {}, timetable: {}, tasks: {}, settings: {}, expenses: {}, deadlines: {}, notes: {}, bunk: {} };
+        fs.writeFileSync(DB_PATH, JSON.stringify(empty, null, 2));
+        return empty;
+    }
+    try {
+        return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    } catch (e) {
+        const empty = { users: {}, timetable: {}, tasks: {}, settings: {}, expenses: {}, deadlines: {}, notes: {}, bunk: {} };
+        fs.writeFileSync(DB_PATH, JSON.stringify(empty, null, 2));
+        return empty;
+    }
+}
+
+function writeData(data) {
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+}
+
+// =============================================================================
+// INIT (no-op for JSON, just ensure file exists)
+// =============================================================================
+function initDB() {
+    readData(); // creates file if missing
+    console.log('✅ JSON database initialized at', DB_PATH);
+}
+
+// =============================================================================
 // USERS
 // =============================================================================
 function createUser(phone, name, callback) {
     try {
-        const stmt = db.prepare(`INSERT OR IGNORE INTO users (phone, name, onboarded) VALUES (?, ?, 0)`);
-        stmt.run(phone, name);
+        const data = readData();
+        if (!data.users[phone]) {
+            data.users[phone] = { name, onboarded: 0, created_at: new Date().toISOString() };
+            writeData(data);
+        }
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function getUser(phone, callback) {
     try {
-        const row = db.prepare(`SELECT * FROM users WHERE phone = ?`).get(phone);
-        callback(null, row || null);
-    } catch (err) {
-        callback(err);
-    }
+        const data = readData();
+        callback(null, data.users[phone] || null);
+    } catch (err) { callback(err); }
 }
 
 function isOnboarded(phone, callback) {
-    getUser(phone, (err, user) => {
-        callback(err, user && user.onboarded === 1);
-    });
+    getUser(phone, (err, user) => callback(err, user && user.onboarded === 1));
 }
 
 function completeOnboarding(phone, name, callback) {
     try {
-        db.prepare(`INSERT OR REPLACE INTO users (phone, name, onboarded) VALUES (?, ?, 1)`).run(phone, name);
+        const data = readData();
+        data.users[phone] = { ...(data.users[phone] || {}), name, onboarded: 1 };
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function updateUserName(phone, name, callback) {
     try {
-        db.prepare(`UPDATE users SET name = ? WHERE phone = ?`).run(name, phone);
+        const data = readData();
+        if (data.users[phone]) data.users[phone].name = name;
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 // =============================================================================
 // TIMETABLE
 // =============================================================================
-function saveTimetable(phone, day, subject, startTime, endTime, venue = '', callback) {
+function saveTimetable(phone, day, subject, startTime, endTime, venue, callback) {
     if (typeof venue === 'function') { callback = venue; venue = ''; }
     try {
+        const data = readData();
+        if (!data.timetable[phone]) data.timetable[phone] = [];
+
         // Remove existing entry for same day+subject
-        db.prepare(`DELETE FROM timetable WHERE phone = ? AND day = ? AND LOWER(subject) = LOWER(?)`).run(phone, day, subject);
-        db.prepare(`INSERT INTO timetable (phone, day, subject, start_time, end_time, venue) VALUES (?, ?, ?, ?, ?, ?)`).run(phone, day, subject, startTime, endTime, venue || '');
+        data.timetable[phone] = data.timetable[phone].filter(c =>
+            !(c.day.toUpperCase() === day.toUpperCase() && c.subject.toLowerCase() === subject.toLowerCase())
+        );
+
+        data.timetable[phone].push({ day: day.toUpperCase(), subject, start_time: startTime, end_time: endTime, venue: venue || '' });
+        // Sort by day then start_time
+        const dayOrder = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+        data.timetable[phone].sort((a, b) => {
+            const di = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+            return di !== 0 ? di : a.start_time.localeCompare(b.start_time);
+        });
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function getTimetable(phone, day, callback) {
     try {
-        let rows;
+        const data = readData();
+        let entries = data.timetable[phone] || [];
         if (day) {
-            rows = db.prepare(`SELECT * FROM timetable WHERE phone = ? AND UPPER(day) = UPPER(?) ORDER BY start_time ASC`).all(phone, day);
-        } else {
-            rows = db.prepare(`SELECT * FROM timetable WHERE phone = ? ORDER BY day ASC, start_time ASC`).all(phone);
+            entries = entries.filter(c => c.day.toUpperCase() === day.toUpperCase());
+            entries.sort((a, b) => a.start_time.localeCompare(b.start_time));
         }
-        callback(null, rows);
-    } catch (err) {
-        callback(err);
-    }
+        callback(null, entries);
+    } catch (err) { callback(err); }
 }
 
 function clearTimetable(phone, day, callback) {
     try {
+        const data = readData();
+        if (!data.timetable[phone]) { data.timetable[phone] = []; }
         if (day) {
-            db.prepare(`DELETE FROM timetable WHERE phone = ? AND UPPER(day) = UPPER(?)`).run(phone, day);
+            data.timetable[phone] = data.timetable[phone].filter(c => c.day.toUpperCase() !== day.toUpperCase());
         } else {
-            db.prepare(`DELETE FROM timetable WHERE phone = ?`).run(phone);
+            data.timetable[phone] = [];
         }
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 // =============================================================================
-// DAILY TASKS
+// TASKS
 // =============================================================================
 function addTask(phone, task, date, callback) {
     try {
-        db.prepare(`INSERT INTO daily_tasks (phone, task, task_date, completed) VALUES (?, ?, ?, 0)`).run(phone, task, date);
+        const data = readData();
+        if (!data.tasks[phone]) data.tasks[phone] = [];
+        const id = Date.now();
+        data.tasks[phone].push({ id, task, task_date: date, completed: 0 });
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function getTasks(phone, date, callback) {
     try {
-        let rows;
-        if (date) {
-            rows = db.prepare(`SELECT * FROM daily_tasks WHERE phone = ? AND task_date = ? AND completed = 0 ORDER BY id ASC`).all(phone, date);
-        } else {
-            rows = db.prepare(`SELECT * FROM daily_tasks WHERE phone = ? AND completed = 0 ORDER BY task_date ASC, id ASC`).all(phone);
-        }
-        callback(null, rows);
-    } catch (err) {
-        callback(err);
-    }
+        const data = readData();
+        let tasks = (data.tasks[phone] || []).filter(t => t.completed === 0);
+        if (date) tasks = tasks.filter(t => t.task_date === date);
+        callback(null, tasks);
+    } catch (err) { callback(err); }
 }
 
 function completeTask(phone, taskId, callback) {
     try {
-        const task = db.prepare(`SELECT * FROM daily_tasks WHERE id = ? AND phone = ?`).get(taskId, phone);
+        const data = readData();
+        const tasks = data.tasks[phone] || [];
+        const task = tasks.find(t => t.id === taskId);
         if (task) {
-            db.prepare(`UPDATE daily_tasks SET completed = 1 WHERE id = ?`).run(taskId);
+            task.completed = 1;
+            writeData(data);
             callback(null, task);
         } else {
             callback(null, null);
         }
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function deleteTask(phone, taskId, callback) {
     try {
-        const task = db.prepare(`SELECT * FROM daily_tasks WHERE id = ? AND phone = ?`).get(taskId, phone);
+        const data = readData();
+        const tasks = data.tasks[phone] || [];
+        const task = tasks.find(t => t.id === taskId);
         if (task) {
-            db.prepare(`DELETE FROM daily_tasks WHERE id = ?`).run(taskId);
+            data.tasks[phone] = tasks.filter(t => t.id !== taskId);
+            writeData(data);
             callback(null, task);
         } else {
             callback(null, null);
         }
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 // =============================================================================
@@ -247,25 +202,20 @@ function deleteTask(phone, taskId, callback) {
 // =============================================================================
 function setUserSetting(phone, setting, value, callback) {
     try {
-        db.prepare(`INSERT OR IGNORE INTO user_settings (phone) VALUES (?)`).run(phone);
-        db.prepare(`UPDATE user_settings SET ${setting} = ? WHERE phone = ?`).run(value, phone);
+        const data = readData();
+        if (!data.settings[phone]) data.settings[phone] = { night_planning_time: '22:00', morning_brief_time: '07:00' };
+        data.settings[phone][setting] = value;
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function getUserSettings(phone, callback) {
     try {
-        let row = db.prepare(`SELECT * FROM user_settings WHERE phone = ?`).get(phone);
-        if (!row) {
-            db.prepare(`INSERT OR IGNORE INTO user_settings (phone) VALUES (?)`).run(phone);
-            row = { phone, night_planning_time: '22:00', morning_brief_time: '07:00' };
-        }
-        callback(null, row);
-    } catch (err) {
-        callback(err);
-    }
+        const data = readData();
+        const defaults = { phone, night_planning_time: '22:00', morning_brief_time: '07:00' };
+        callback(null, { ...defaults, ...(data.settings[phone] || {}) });
+    } catch (err) { callback(err); }
 }
 
 function setNightPlanningTime(phone, time, callback) {
@@ -281,36 +231,32 @@ function setMorningBriefTime(phone, time, callback) {
 // =============================================================================
 function addExpense(phone, amount, category, description, date, callback) {
     try {
-        db.prepare(`INSERT INTO expenses (phone, amount, category, description, date) VALUES (?, ?, ?, ?, ?)`).run(phone, amount, category, description, date);
+        const data = readData();
+        if (!data.expenses[phone]) data.expenses[phone] = [];
+        data.expenses[phone].push({ id: Date.now(), amount, category, description, date });
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function getExpenses(phone, startDate, endDate, callback) {
     try {
-        let rows;
-        if (startDate && endDate) {
-            rows = db.prepare(`SELECT * FROM expenses WHERE phone = ? AND date BETWEEN ? AND ? ORDER BY date DESC`).all(phone, startDate, endDate);
-        } else if (startDate) {
-            rows = db.prepare(`SELECT * FROM expenses WHERE phone = ? AND date >= ? ORDER BY date DESC`).all(phone, startDate);
-        } else {
-            rows = db.prepare(`SELECT * FROM expenses WHERE phone = ? ORDER BY date DESC`).all(phone);
-        }
-        callback(null, rows);
-    } catch (err) {
-        callback(err);
-    }
+        const data = readData();
+        let expenses = data.expenses[phone] || [];
+        if (startDate) expenses = expenses.filter(e => e.date >= startDate);
+        if (endDate) expenses = expenses.filter(e => e.date <= endDate);
+        expenses.sort((a, b) => b.date.localeCompare(a.date));
+        callback(null, expenses);
+    } catch (err) { callback(err); }
 }
 
 function deleteExpense(phone, expenseId, callback) {
     try {
-        db.prepare(`DELETE FROM expenses WHERE id = ? AND phone = ?`).run(expenseId, phone);
+        const data = readData();
+        data.expenses[phone] = (data.expenses[phone] || []).filter(e => e.id !== expenseId);
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 // =============================================================================
@@ -318,29 +264,29 @@ function deleteExpense(phone, expenseId, callback) {
 // =============================================================================
 function addDeadline(phone, task, deadlineDate, callback) {
     try {
-        db.prepare(`INSERT INTO deadlines (phone, task, deadline_date) VALUES (?, ?, ?)`).run(phone, task, deadlineDate);
+        const data = readData();
+        if (!data.deadlines[phone]) data.deadlines[phone] = [];
+        data.deadlines[phone].push({ id: Date.now(), task, deadline_date: deadlineDate, created_at: new Date().toISOString() });
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function getDeadlines(phone, callback) {
     try {
-        const rows = db.prepare(`SELECT * FROM deadlines WHERE phone = ? ORDER BY deadline_date ASC`).all(phone);
-        callback(null, rows);
-    } catch (err) {
-        callback(err);
-    }
+        const data = readData();
+        const deadlines = (data.deadlines[phone] || []).sort((a, b) => a.deadline_date.localeCompare(b.deadline_date));
+        callback(null, deadlines);
+    } catch (err) { callback(err); }
 }
 
 function deleteDeadline(phone, deadlineId, callback) {
     try {
-        db.prepare(`DELETE FROM deadlines WHERE id = ? AND phone = ?`).run(deadlineId, phone);
+        const data = readData();
+        data.deadlines[phone] = (data.deadlines[phone] || []).filter(d => d.id !== deadlineId);
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 // =============================================================================
@@ -348,25 +294,21 @@ function deleteDeadline(phone, deadlineId, callback) {
 // =============================================================================
 function addNote(phone, subject, content, callback) {
     try {
-        db.prepare(`INSERT INTO notes (phone, subject, content) VALUES (?, ?, ?)`).run(phone, subject, content);
+        const data = readData();
+        if (!data.notes[phone]) data.notes[phone] = [];
+        data.notes[phone].push({ id: Date.now(), subject, content, created_at: new Date().toISOString() });
+        writeData(data);
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function getNotes(phone, subject, callback) {
     try {
-        let rows;
-        if (subject) {
-            rows = db.prepare(`SELECT * FROM notes WHERE phone = ? AND LOWER(subject) = LOWER(?) ORDER BY created_at DESC`).all(phone, subject);
-        } else {
-            rows = db.prepare(`SELECT * FROM notes WHERE phone = ? ORDER BY subject ASC, created_at DESC`).all(phone);
-        }
-        callback(null, rows);
-    } catch (err) {
-        callback(err);
-    }
+        const data = readData();
+        let notes = data.notes[phone] || [];
+        if (subject) notes = notes.filter(n => n.subject.toLowerCase() === subject.toLowerCase());
+        callback(null, notes);
+    } catch (err) { callback(err); }
 }
 
 // =============================================================================
@@ -374,46 +316,46 @@ function getNotes(phone, subject, callback) {
 // =============================================================================
 function addBunkRecord(phone, subject, date, callback) {
     try {
-        const existing = db.prepare(`SELECT id FROM bunk_records WHERE phone = ? AND LOWER(subject) = LOWER(?) AND date = ?`).get(phone, subject, date);
-        if (!existing) {
-            db.prepare(`INSERT INTO bunk_records (phone, subject, date) VALUES (?, ?, ?)`).run(phone, subject, date);
+        const data = readData();
+        if (!data.bunk[phone]) data.bunk[phone] = [];
+        const exists = data.bunk[phone].find(b => b.subject.toLowerCase() === subject.toLowerCase() && b.date === date);
+        if (!exists) {
+            data.bunk[phone].push({ subject, date });
+            writeData(data);
         }
         callback(null);
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 function getBunkRecords(phone, subject, callback) {
     try {
-        let rows;
-        if (subject) {
-            rows = db.prepare(`SELECT * FROM bunk_records WHERE phone = ? AND LOWER(subject) = LOWER(?) ORDER BY date DESC`).all(phone, subject);
-        } else {
-            rows = db.prepare(`SELECT * FROM bunk_records WHERE phone = ? ORDER BY date DESC`).all(phone);
-        }
-        callback(null, rows);
-    } catch (err) {
-        callback(err);
-    }
+        const data = readData();
+        let records = data.bunk[phone] || [];
+        if (subject) records = records.filter(b => b.subject.toLowerCase() === subject.toLowerCase());
+        callback(null, records);
+    } catch (err) { callback(err); }
 }
 
 // =============================================================================
-// ALL USERS (for cron jobs)
+// ALL USERS — for cron jobs (no memory gate, reads from disk)
 // =============================================================================
 function getAllUsers(callback) {
     try {
-        const onboardedUsers = db.prepare(`SELECT phone FROM users WHERE onboarded = 1`).all();
-        const phoneSet = new Set(onboardedUsers.map(u => u.phone));
+        const data = readData();
+        const phoneSet = new Set();
 
-        // Also include anyone who has timetable data (works on fresh installs)
-        const timetableUsers = db.prepare(`SELECT DISTINCT phone FROM timetable`).all();
-        timetableUsers.forEach(u => phoneSet.add(u.phone));
+        // Onboarded users
+        Object.keys(data.users || {}).forEach(phone => {
+            if (data.users[phone].onboarded === 1) phoneSet.add(phone);
+        });
+
+        // Anyone with timetable data (catches fresh installs & partial onboarding)
+        Object.keys(data.timetable || {}).forEach(phone => {
+            if ((data.timetable[phone] || []).length > 0) phoneSet.add(phone);
+        });
 
         callback(null, Array.from(phoneSet).map(phone => ({ phone })));
-    } catch (err) {
-        callback(err);
-    }
+    } catch (err) { callback(err); }
 }
 
 module.exports = {
