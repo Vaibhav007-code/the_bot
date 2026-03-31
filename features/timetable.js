@@ -305,41 +305,34 @@ async function sendClassReminders(client, activeUsers) {
     const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const currentDay = days[now.getDay()];
     
-    // Get all users
+    // Current HH:MM string
+    const currentHH = now.getHours().toString().padStart(2, '0');
+    const currentMM = now.getMinutes().toString().padStart(2, '0');
+    const currentTime = `${currentHH}:${currentMM}`;
+    
     const { getAllUsers } = require('../utils/db');
     
     getAllUsers((err, users) => {
-        if (err) {
-            console.error('Error getting users for class reminders:', err);
-            return;
-        }
+        if (err) return;
         
         users.forEach(user => {
             getTimetable(user.phone, currentDay, (err, timetable) => {
-                if (err) {
-                    console.error(`Error getting timetable for ${user.phone}:`, err);
-                    return;
-                }
+                if (err || !timetable) return;
                 
                 timetable.forEach(cls => {
-                    // Check if class starts in 5 minutes
-                    const [classHour, classMin] = cls.start_time.split(':');
-                    const classTime = new Date();
-                    classTime.setHours(parseInt(classHour), parseInt(classMin), 0, 0);
+                    // Compute what HH:MM the 5-min reminder should fire at
+                    const [classH, classM] = cls.start_time.split(':').map(Number);
+                    const totalMins = classH * 60 + classM - 5;
+                    const reminderH = Math.floor(totalMins / 60).toString().padStart(2, '0');
+                    const reminderM = (totalMins % 60).toString().padStart(2, '0');
+                    const reminderTime = `${reminderH}:${reminderM}`;
                     
-                    const reminderTime = new Date(classTime);
-                    reminderTime.setMinutes(reminderTime.getMinutes() - 5);
-                    
-                    // Check if current time matches reminder time (within 1 minute window)
-                    const timeDiff = Math.abs(now.getTime() - reminderTime.getTime());
-                    if (timeDiff < 60000) { // Within 1 minute
+                    if (currentTime === reminderTime) {
                         const chatId = getChatId(user.phone);
                         const v = cls.venue ? `\n📍 Venue: *${cls.venue}*` : '';
                         client.sendMessage(chatId,
-                            `🔔 *${cls.subject}* starts at ${cls.start_time} (ends at ${cls.end_time}) in 5 minutes!${v}`
-                        ).catch(err => {
-                            console.error(`Error sending reminder to ${user.phone}:`, err);
-                        });
+                            `🔔 *${cls.subject}* starts at ${cls.start_time} in 5 minutes!${v}\n⏱️ Ends at ${cls.end_time}`
+                        ).catch(e => console.error('Reminder send error:', e));
                     }
                 });
             });
