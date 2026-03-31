@@ -9,21 +9,17 @@ async function handleTimetableUpdate(client, message, phone, conversationState) 
     if (textToParse.trim() === '1' || textToParse.toLowerCase().trim() === 'timetable' || textToParse.toLowerCase().trim() === 'set timetable') {
         return {
             action: 'await_timetable_data',
-            reply: '📚 Please send your timetable in one of these formats:\n\n' +
+            reply: '📚 Please send your timetable in one of these formats (Venues/Rooms are optional):\n\n' +
                    '*Format 1 (Text):*\n' +
-                   'Mon: Math 09:00-10:00, Physics 11:00-12:00 | Tue: DBMS 10:00-11:00\n\n' +
+                   'Mon: Math 09:00-10:00 Room 302, Physics 11:00-12:00\n\n' +
                    '*Format 2 (JSON):*\n' +
                    '{\n' +
                    '  "Mon": [\n' +
-                   '    {"subject": "Math", "start": "09:00", "end": "10:00"},\n' +
-                   '    {"subject": "Physics", "start": "11:00", "end": "12:00"}\n' +
-                   '  ],\n' +
-                   '  "Tue": [\n' +
-                   '    {"subject": "DBMS", "start": "10:00", "end": "11:00"}\n' +
+                   '    {"subject": "Math", "start": "09:00", "end": "10:00", "venue": "Room 302"}\n' +
                    '  ]\n' +
                    '}\n\n' +
                    '*Format 3 (Time with AM/PM):*\n' +
-                   'Mon: Math 9am-10am, Physics 11am-12pm\n\n' +
+                   'Mon: Math 9am-10am Lab 2\n\n' +
                    'Send "cancel" to go back to menu.'
         };
     }
@@ -34,10 +30,10 @@ async function handleTimetableUpdate(client, message, phone, conversationState) 
         await message.reply(
             '❌ I couldn\'t parse your timetable. Please check the format.\n\n' +
             '📝 *Example formats:*\n' +
-            'Mon: Math 09:00-10:00, Physics 11:00-12:00\n\n' +
+            'Mon: Math 09:00-10:00 Room 302\n\n' +
             'Or JSON:\n' +
-            '{"Mon": [{"subject": "Math", "start": "09:00", "end": "10:00"}]}\n\n' +
-            'Make sure to include: day, subject, start time, and end time.'
+            '{"Mon": [{"subject": "Math", "start": "09:00", "end": "10:00", "venue": "Room 302"}]}\n\n' +
+            'Required: day, subject, start time, end time. (Venue is optional)'
         );
         return null;
     }
