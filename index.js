@@ -46,8 +46,8 @@ const client = new Client({
         dataPath: sessionsDir
     }),
     puppeteer: {
-        headless: "new",
-        executablePath: process.env.CHROME_BIN || undefined,
+        headless: true,
+        executablePath: process.env.CHROME_BIN || '/data/data/com.termux/files/usr/bin/chromium-browser',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
